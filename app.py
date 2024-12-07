@@ -1,43 +1,33 @@
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, send_file
 import qrcode
-from qrcode.image.svg import SvgPathImage
 import io
 
 app = Flask(__name__)
 
-@app.route('/generate_qr', methods=['GET'])
+@app.route('/generate-qr', methods=['POST'])
 def generate_qr():
-    # Get the input URL from the query parameters
-    input_url = request.args.get('url', 'https://example.com')  # Default if no URL provided
-    
-    # Create QR code
+    data = request.json.get("url")
+    if not data:
+        return {"error": "Missing 'url' in the request body"}, 400
+
+    # Generate QR code
     qr = qrcode.QRCode(
         version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
         box_size=10,
-        border=0,  # No white border
+        border=4,
     )
-    qr.add_data(input_url)
+    qr.add_data(data)
     qr.make(fit=True)
 
-    # Generate a transparent QR code image
-    img = qr.make_image(fill_color="black", back_color=None)  # Transparent background
-
-    # Save to in-memory file in PNG format
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Save QR code to an in-memory buffer
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     buffer.seek(0)
 
-    # Prepare the downloadable file link
-    response = send_file(
-        buffer,
-        mimetype="image/png",
-        as_attachment=True,
-        download_name="qr_code.png"
-    )
-
-    return response
+    return send_file(buffer, mimetype='image/png', as_attachment=True, download_name="qrcode.png")
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
+    app.run(host='0.0.0.0', port=5000)
