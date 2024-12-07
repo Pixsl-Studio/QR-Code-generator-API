@@ -1,39 +1,42 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, send_file, jsonify
 import qrcode
-from io import BytesIO
-import os
+from qrcode.image.svg import SvgPathImage
+import io
 
 app = Flask(__name__)
 
-# Temporary local file storage path
-UPLOAD_FOLDER = "static"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
 @app.route('/generate_qr', methods=['GET'])
 def generate_qr():
-    input_url = request.args.get('url', 'https://example.com')  # URL to encode
+    # Get the input URL from the query parameters
+    input_url = request.args.get('url', 'https://example.com')  # Default if no URL provided
     
-    # Generate the QR code
+    # Create QR code
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_H,
         box_size=10,
-        border=0
+        border=0,  # No white border
     )
     qr.add_data(input_url)
     qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color=None)  # Transparent QR
 
-    # Save the QR code to a local PNG file
-    file_name = f"qr_{input_url.replace('https://', '').replace('http://', '').replace('/', '_')}.png"
-    file_path = os.path.join(UPLOAD_FOLDER, file_name)
-    img.save(file_path, format="PNG")
+    # Generate a transparent QR code image
+    img = qr.make_image(fill_color="black", back_color=None)  # Transparent background
 
-    # Generate a public URL (if hosted on Render or a similar platform)
-    public_url = f"https://your-app-name.onrender.com/{file_path}"
+    # Save to in-memory file in PNG format
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
 
-    # Return the public URL
-    return jsonify({"qr_code_url": public_url})
+    # Prepare the downloadable file link
+    response = send_file(
+        buffer,
+        mimetype="image/png",
+        as_attachment=True,
+        download_name="qr_code.png"
+    )
+
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True)
