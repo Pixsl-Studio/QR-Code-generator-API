@@ -75,4 +75,4 @@ def generate_qr_code():
 
 if __name__ == '__main__':
     # Run the app in production-safe mode
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=5000)
